@@ -1,0 +1,1 @@
+For coding tasks in nashik-map, validate with npm run build from D:\abhishek_project\ornet\nashik-map. Vite may emit a chunk-size warning; a successful build exit is acceptable unless task-specific tests fail.

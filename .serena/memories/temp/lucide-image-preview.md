@@ -1,0 +1,1 @@
+User requested lucide-react icons throughout the new nashik-map UI where appropriate, with a professional design and no excessive animation. User also wants tree-photo hover UI to provide an option to open the image in a large modal/window for viewing.

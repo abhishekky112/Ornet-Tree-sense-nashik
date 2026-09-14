@@ -1,0 +1,1 @@
+Filtering issue: OpenLayers TileWMS source updateParams merges params, so omitting CQL_FILTER when filters become empty can leave the previous CQL_FILTER active. Fix getTreeWmsSourceParams to always include CQL_FILTER (empty string when no filter) so unchecking last selection clears server-side filter.

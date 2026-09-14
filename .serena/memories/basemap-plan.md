@@ -1,0 +1,1 @@
+Nashik-map basemap requirement: keep existing working satellite imagery; use OpenFreeMap for Street/Light/Dark; Hybrid should reuse the same satellite layer plus a transparent OpenFreeMap roads/labels overlay. Avoid CARTO/API-key services and avoid duplicating satellite layers. Keep map_openlayer untouched.

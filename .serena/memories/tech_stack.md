@@ -1,0 +1,1 @@
+nashik-map uses React, Vite, JavaScript, and OpenLayers. GeoServer WMS/WFS supplies Nashik tree data. Package manager is npm.

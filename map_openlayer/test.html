@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tree Census</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <style>
+    html, body, #map {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .ol-popup {
+      position: absolute;
+      background-color: white;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #cccccc;
+      min-width: 500px;
+      overflow-y: auto;
+      z-index: 100;
+      width: 100%;
+    }
+
+    
+    #map {
+      width: 100%;
+      height: 500px;
+      position: relative; /* ✅ Needed for .filterTypeSet to be positioned within */
+    }
+
+    .filterTypeSet {
+      position: absolute;
+      top: 15%;
+      right: 2%;
+      background-color: rgba(255, 255, 255, 0.95);
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+      padding: 15px;
+      z-index: 1000;
+      max-height: 80vh;
+      overflow-y: auto;
+      width: 220px;
+    }
+
+    .modal-lg, .modal-xl {
+        --bs-modal-width: 500px;
+    }
+
+    .btn-primary {
+        --bs-btn-color: #fff;
+        --bs-btn-bg: #198754;
+        --bs-btn-border-color: #198754;
+        --bs-btn-hover-color: #fff;
+        --bs-btn-hover-bg: #198754;
+        --bs-btn-hover-border-color: #198754;
+        --bs-btn-focus-shadow-rgb: 49, 132, 253;
+        --bs-btn-active-color: #fff;
+        --bs-btn-active-bg: #198754;
+        --bs-btn-active-border-color: #198754;
+        --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+        --bs-btn-disabled-color: #fff;
+        --bs-btn-disabled-bg: #198754;
+        --bs-btn-disabled-border-color: #198754;
+    }
+
+    .btn-outline-primary {
+      --bs-btn-color: #198754;
+      --bs-btn-border-color: #198754;
+      --bs-btn-hover-color: #fff;
+      --bs-btn-hover-bg: #198754;
+      --bs-btn-hover-border-color: #198754;
+      --bs-btn-focus-shadow-rgb: 13, 110, 253;
+      --bs-btn-active-color: #fff;
+      --bs-btn-active-bg: #198754;
+      --bs-btn-active-border-color: #198754;
+      --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+      --bs-btn-disabled-color: #198754;
+      --bs-btn-disabled-bg: transparent;
+      --bs-btn-disabled-border-color: #198754;
+      --bs-gradient: none;
+  }
+  .treeInfo{
+    margin-bottom: 5px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+    .map-controls button {
+      margin: 2px;
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+    
+    .active-basemap {
+      background-color: #198754 !important;
+      color: white !important;
+    }
+
+    .map-controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      background: white;
+      padding: 5px;
+      border-radius: 4px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+    }
+    .map-controls button.active-basemap {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current, .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        color: inherit !important;
+        border-radius: 550px !important;
+        padding: 3px 10px !important;
+        background: #d1e7dd !important;
+        border: 1px solid #198754 !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container-fluid">
+    <div class="row">
+      <!-- <div class="col-12 d-flex justify-content-center">
+        <div class="" style="font-size: 20px;">
+          <span style="font-weight: bold;" id="countLoding">🌳 Loading tree count...</span>
+          <span style="font-weight: bold; color: rgb(0, 181, 6);" id="featureFilterCount"></span>
+          <span style="font-weight: bold; color: rgb(0, 181, 6);" id="featureCount"></span>
+        </div>
+      </div> -->
+      <!-- <div class="col-2">
+        <div class="form-group">
+          <label for="">Spacie</label>
+          <select class="form-select" id="speciesSelect" onchange="onFilterApply()">
+            <option value="">All</option>
+            <option value="Exotic">Exotic</option>
+            <option value="Indigenous">Indigenous</option>
+          </select>
+        </div>
+      </div> -->
+      <input type="hidden" value="All" id="filter_dateSelect">
+      <!-- <div class="col-2">
+        <div class="form-group">
+          <label for="">Filter Type</label>
+          <select class="form-select" id="filter_typeSelect" onchange="getDropdowns()">
+            <option value="All">All</option>
+            <option value="WardWise">Ward Wise</option>
+            <option value="HeritageTrees">Heritage Trees</option>
+            <option value="OwnershipStatus">Ownership Status</option>
+            <option value="HealthStatus">Health Status</option>
+            <option value="EconomicImp">Economic Imp</option>
+            <option value="AdditionalParameters">Additional Parameters</option>
+            <option value="TreeAttributes">Tree Attributes</option>
+            <option value="IUCN_Status">IUCN Status</option>
+          </select>
+        </div>
+      </div>
+
+       
+      
+      <div class="col-2 filter-dropdown" id="WardDropdownContainer" style="display:none;">
+        <div class="form-group">
+          <label for="">Ward</label>
+          <select class="form-select" id="WardDropdown" onchange="onFilterApply()">
+            <option value="">All Wards</option>
+          </select>
+        </div>
+      </div> -->
+      
+      <!-- Health Condition -->
+    <!--   <div class="col-2 filter-dropdown" id="HealthDropdownContainer" style="display:none;">
+        <div class="form-group">
+          <label for="HealthDropdown">Health Condition</label>
+          <select class="form-select" id="HealthDropdown" onchange="onFilterApply()">
+            <option value="">All Conditions</option>
+          </select>
+        </div>
+      </div> -->
+      
+      <!-- Land Ownership -->
+      <!-- <div class="col-2 filter-dropdown" id="LandOwnershipDropdownContainer" style="display:none;">
+        <div class="form-group">
+          <label for="LandOwnershipDropdown">Land Ownership</label>
+          <select class="form-select" id="LandOwnershipDropdown" onchange="onFilterApply()">
+            <option value="">All Ownership</option>
+          </select>
+        </div>
+      </div> -->
+      
+      <!-- Tree Attributes -->
+      <!-- <div class="col-2 filter-dropdown" id="TreeAttributesDropdownContainer" style="display:none;">
+        <div class="form-group">
+          <label for="TreeAttributesDropdown">Tree Attributes</label>
+          <select class="form-select" id="TreeAttributesDropdown" onchange="onFilterApply()">
+            <option value="">All Attributes</option>
+          </select>
+        </div>
+      </div> -->
+      
+      <!-- IUCN Status -->
+    <!--   <div class="col-2 filter-dropdown" id="IUCNStatusDropdownContainer" style="display:none;">
+        <div class="form-group">
+          <label for="IUCNStatusDropdown">IUCN Status</label>
+          <select class="form-select" id="IUCNStatusDropdown" onchange="onFilterApply()">
+            <option value="">All Status</option>
+          </select>
+        </div>
+      </div> -->
+      
+      <!-- Economic Importance -->
+     <!--  <div class="col-2 filter-dropdown" id="EconomicImpDropdownContainer" style="display:none;">
+        <div class="form-group">
+          <label for="EconomicImpDropdown">Economic Importance</label>
+          <select class="form-select" id="EconomicImpDropdown" onchange="onFilterApply()">
+            <option value="">All Importance</option>
+          </select>
+        </div>
+      </div> -->
+      
+      <!-- Additional Parameters -->
+     <!--  <div class="col-2 filter-dropdown" id="AdditionalParamDropdownContainer" style="display:none;">
+        <div class="form-group">
+          <label for="AdditionalParamDropdown">Additional Parameters</label>
+          <select class="form-select" id="AdditionalParamDropdown" onchange="onFilterApply()">
+            <option value="">All Parameters</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="row mt-3"> -->
+      <!-- <div class="col-12 mb-2">
+        <button class="btn btn-primary" onclick="activatePolygonDraw()">✏️ Draw Polygon</button>
+        <button class="btn btn-outline-primary" onclick="clearDrawings()">🗑️ Clear Polygon</button>
+      </div> -->
+    <!-- </div>
+  </div>
+ -->
+  <div id="map" >
+      <div class="col-2 filterTypeSet">
+        <div class="form-group">
+          <label>Filter Type</label>
+          <div id="filter_typeCheckboxes">
+            <div id="container-WardWise">
+              <label><input type="checkbox" value="WardWise" onchange="toggleNestedOptions(this)"> Ward Wise</label>
+            </div>
+            <div id="container-HeritageTrees">
+              <label><input type="checkbox" value="HeritageTrees" onchange="toggleNestedOptions(this)"> Heritage Trees</label>
+            </div>
+            <div id="container-OwnershipStatus">
+              <label><input type="checkbox" value="OwnershipStatus" onchange="toggleNestedOptions(this)"> Ownership Status</label>
+            </div>
+            <div id="container-HealthStatus">
+              <label><input type="checkbox" value="HealthStatus" onchange="toggleNestedOptions(this)"> Health Status</label>
+            </div>
+            <div id="container-EconomicImp">
+              <label><input type="checkbox" value="EconomicImp" onchange="toggleNestedOptions(this)"> Economic Imp</label>
+            </div>
+            <div id="container-AdditionalParameters">
+              <label><input type="checkbox" value="AdditionalParameters" onchange="toggleNestedOptions(this)"> Additional Parameters</label>
+            </div>
+            <div id="container-TreeAttributes">
+              <label><input type="checkbox" value="TreeAttributes" onchange="toggleNestedOptions(this)"> Tree Attributes</label>
+            </div>
+            <div id="container-IUCN_Status">
+              <label><input type="checkbox" value="IUCN_Status" onchange="toggleNestedOptions(this)"> IUCN Status</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <div id="popup" class="ol-popup">
+    <div id="popup-content"></div>
+  </div>
+
+  <!-- ✅ ADD THIS MODAL CODE IN YOUR HTML PAGE -->
+  <div class="modal fade" id="treeModal" tabindex="-1" aria-labelledby="treeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Trees in Selected Area <span id="totalTreeFromPolygone"></span></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="treeModalBody">
+          <!-- Tree data will appear here -->
+        </div>
+      </div>
+    </div>
+  </div> 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script>
+    //   let isRestrictClickPerTreeSelect = false;
+    //   let activeCQLFilter = null;
+    //   const urlParam = new URLSearchParams(window.location.search);
+    //   const electionName = urlParam.get('electionName');
+    //   const centralLongs = urlParam.get('centralLong');
+    //   const centralLat = urlParam.get('centralLat');
+    //   const geoserverUrl = 'http://103.14.97.236:8006/geoserver';
+    //   const workSpaceName = 'amravatitreecensus';
+    //   const layerName = 'amaravtitreecensus';
+    //   const filter_date = urlParam.get('filter_date');
+    //   const filter_type = urlParam.get('filter_type');
+    //   const filter_val = urlParam.get('filter_val');
+    //   const wardPck = urlParam.get('wardPck');
+
+
+    //   const googleSatellite = new ol.layer.Tile({
+    //   source: new ol.source.XYZ({
+    //     url: 'http://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',  // Satellite
+    //     tilePixelRatio: 2,
+    //     attributions: '© Google Maps',
+    //   }),
+    //   visible: false,
+    //   title: 'Satellite'
+    // });
+
+    // const googleStreet = new ol.layer.Tile({
+    //   source: new ol.source.XYZ({
+    //     url: 'http://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',  // Street map
+    //     tilePixelRatio: 2,
+    //     attributions: '© Google Maps',
+    //   }),
+    //   visible: false,
+    //   title: 'Street'
+    // });
+
+    // const googleHybrid = new ol.layer.Tile({
+    //   source: new ol.source.XYZ({
+    //     url: 'http://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',  // Hybrid
+    //     tilePixelRatio: 2,
+    //     attributions: '© Google Maps',
+    //   }),
+    //   visible: true,
+    //   title: 'Hybrid'
+    // });
+      
+    // const treeLayer = new ol.layer.Tile({
+    //     source: new ol.source.TileWMS({
+    //       url: `${geoserverUrl}/${workSpaceName}/wms`,
+    //       params: {
+    //         'LAYERS': `${workSpaceName}:${layerName}`,
+    //         'TILED': true,
+    //         'FORMAT': 'image/png',
+    //         'TRANSPARENT': true,
+    //         'VERSION': '1.1.0',
+    //         'CQL_FILTER': activeCQLFilter
+    //       },
+    //       serverType: 'geoserver',
+    //       crossOrigin: 'anonymous', 
+    //       transition: 0
+    //     }),
+    //     opacity: 1
+    //   });
+
+
+    //   const kmlLayer = new ol.layer.Vector({
+    //       source: new ol.source.Vector({
+    //         url: 'kml/AllWards.kml',
+    //         format: new ol.format.KML()
+    //       }),
+    //       style: new ol.style.Style({
+    //         stroke: new ol.style.Stroke({
+    //           color: '#ff0000',
+    //           width: 2
+    //         }),
+    //         fill: new ol.style.Fill({
+    //           color: 'rgba(255, 0, 0, 0.1)'
+    //         }),
+    //         image: new ol.style.Circle({
+    //           radius: 5,
+    //           fill: new ol.style.Fill({ color: 'red' }),
+    //           stroke: new ol.style.Stroke({ color: '#fff', width: 1 })
+    //         })
+    //       })
+    //     });
+
+    //   // ✅ Initialize map
+    //   const map = new ol.Map({
+    //     target: 'map',
+    //     // layers: [googleSatellite ,kmlLayer,indoreLayer, treeLayer],
+    //     layers: [googleSatellite, googleStreet, googleHybrid, kmlLayer, treeLayer],
+    //     view: new ol.View({
+    //       center: ol.proj.fromLonLat([centralLongs, centralLat]),// Navi Mumbai (NMMC area)
+    //       zoom: 12
+    //     })
+
+    //   });
+      
+    //   window.onload = function () {
+    //     if (filter_type) {
+    //       $('#filter_typeSelect').val(filter_type).trigger('change');
+    //     }
+
+    //     if (filter_type === 'OwnershipStatus') {
+    //       $('#LandOwnershipDropdown').val(filter_val);
+    //     } else if (filter_type === 'HealthStatus') {
+    //       $('#HealthDropdown').val(filter_val);
+    //     } else if (filter_type === 'TreeAttributes') {
+    //       $('#TreeAttributesDropdown').val(filter_val);
+    //     } else if (filter_type === 'IUCN_Status') {
+    //       $('#IUCNStatusDropdown').val(filter_val);
+    //     } else if (filter_type === 'EconomicImp') {
+    //       $('#EconomicImpDropdown').val(filter_val);
+    //     } else if (filter_type === 'AdditionalParameters') {
+    //       $('#AdditionalParamDropdown').val(filter_val);
+    //     } else if (filter_type === 'WardWise' || filter_type === 'HeritageTrees') {
+    //       $('#WardDropdown').val(filter_val);
+    //     }
+
+    //     // Use a timeout to ensure values are set before applying filter
+    //     if (filter_type || filter_val) {
+    //       setTimeout(() => {
+    //         onFilterApply();
+    //       }, 200); // Adjust delay if needed
+    //     }
+    //   };
+
+
+    // // Filter Data ---------------------------------------------------------
+    // function onFilterApply() {
+    //   let filters = [];
+    //   let stylesLayers = "";
+    //   const filter_date = document.getElementById('filter_dateSelect').value;
+    //   const filter_type = document.getElementById('filter_typeSelect').value;
+
+    //   if (filter_type === 'OwnershipStatus') {
+    //     const filter_val = (document.getElementById('LandOwnershipDropdown').value || "").trim();
+    //     if (filter_val) {
+    //       filters.push(`OwnershipOfLand='${filter_val}'`);
+    //     }
+    //   } else if (filter_type === 'HealthStatus') {
+    //     const filter_val = (document.getElementById('HealthDropdown').value || "").trim();
+    //     if (filter_val) {
+    //       filters.push(`HealthCondition='${filter_val}'`);
+    //     }
+    //   } else if (filter_type === 'TreeAttributes') {
+    //     const filter_val = (document.getElementById('TreeAttributesDropdown').value || "").trim();
+    //     if (filter_val) {
+    //       filters.push(`TreeAttributesJson='${filter_val}'`);
+    //     }
+    //   } else if (filter_type === 'IUCN_Status') {
+    //     const filter_val = (document.getElementById('IUCNStatusDropdown').value || "").trim();
+    //     if (filter_val) {
+    //       filters.push(`IUCN_Status='${filter_val}'`);
+    //     }
+    //   } else if (filter_type === 'EconomicImp') {
+    //     const filter_val = (document.getElementById('EconomicImpDropdown').value || "").trim();
+    //     if (filter_val) {
+    //       filters.push(`EconomicImp='${filter_val}'`);
+    //     }
+    //   } else if (filter_type === 'AdditionalParameters') {
+    //     const filter_val = (document.getElementById('AdditionalParamDropdown').value || "").trim();
+    //     if (filter_val) {
+    //       filters.push(`OwnershipOfLand='${filter_val}'`);
+    //     }
+    //   } else if (filter_type === 'WardWise') {
+    //     const filter_val = (document.getElementById('WardDropdown').value || "").trim();
+    //     if (filter_val) {
+    //       filters.push(`WardNameOrNum='${filter_val}'`);
+    //     }
+    //   } else if (filter_type === 'HeritageTrees') {
+    //     const filter_val = (document.getElementById('WardDropdown').value || "").trim();
+    //     filters.push(`IsHeritageTree='Yes'`);
+    //     if (filter_val) {
+    //       filters.push(`WardNameOrNum='${filter_val}'`);
+    //     }
+    //     stylesLayers = "haritage_tree";
+    //   }
+
+    //   activeCQLFilter = filters.length > 0 ? filters.join(" AND ") : null;
+
+    //   console.log("🔍 Applying CQL Filter:", activeCQLFilter);
+    //   treeLayer.getSource().updateParams({
+    //     'CQL_FILTER': activeCQLFilter,
+    //     'STYLES': stylesLayers
+    //   });
+
+    //   // fetchFilteredTreeCount(activeCQLFilter);
+    // }
+
+    let isRestrictClickPerTreeSelect = false;
+    let activeCQLFilter = null;
+      let filterData = {};
+    const urlParam = new URLSearchParams(window.location.search);
+    const electionName = urlParam.get('electionName');
+    const centralLongs = urlParam.get('centralLong');
+    const centralLat = urlParam.get('centralLat');
+    const geoserverUrl = 'https://www.ornettreecensus.com/geoserver';
+    const workSpaceName = 'amravatitreecensus';
+    const layerName = 'amaravtitreecensus';
+    const filter_date = urlParam.get('filter_date');
+    const filter_type = urlParam.get('filter_type');
+    const filter_val = urlParam.get('filter_val');
+    const wardPck = urlParam.get('wardPck');
+
+    // // ✅ Prepare filter before creating treeLayer
+    // let filters = [];
+    // let stylesLayers = "";
+    // if (filter_type && filter_val) {
+    //   switch (filter_type) {
+    //     case 'OwnershipStatus':
+    //       filters.push(`OwnershipOfLand='${filter_val}'`);
+    //       break;
+    //     case 'HealthStatus':
+    //       filters.push(`HealthCondition='${filter_val}'`);
+    //       break;
+    //     case 'TreeAttributes':
+    //       filters.push(`TreeAttributesJson='${filter_val}'`);
+    //       break;
+    //     case 'IUCN_Status':
+    //       filters.push(`IUCN_Status='${filter_val}'`);
+    //       break;
+    //     case 'EconomicImp':
+    //       filters.push(`EconomicImp='${filter_val}'`);
+    //       break;
+    //     case 'AdditionalParameters':
+    //       filters.push(`OwnershipOfLand='${filter_val}'`);
+    //       break;
+    //     case 'WardWise':
+    //       filters.push(`WardNameOrNum='${filter_val}'`);
+    //       break;
+    //     case 'HeritageTrees':
+    //       filters.push(`IsHeritageTree='Yes'`);
+    //       if (filter_val) {
+    //         filters.push(`WardNameOrNum='${filter_val}'`);
+    //       }
+    //       stylesLayers = "haritage_tree";
+    //       break;
+    //   }
+    // // }
+
+    // activeCQLFilter = filters.length > 0 ? filters.join(" AND ") : null;
+
+    // ✅ Prepare filter before creating treeLayer
+    let activeFilters = {}; // Store selected filters
+
+    let stylesLayers = "";
+
+    window.onload = function () {
+      if (filter_type && filter_val) {
+        switch (filter_type) {
+            case 'WardWise':
+              activeFilters[filter_type] = filter_val ? `WardNameOrNum='${filter_val}'` : '';
+              break;
+            case 'HeritageTrees':
+              activeFilters[filter_type] = filter_val
+                ? `IsHeritageTree='Yes' AND WardNameOrNum='${filter_val}'`
+                : `IsHeritageTree='Yes'`;
+              break;
+            case 'OwnershipStatus':
+              activeFilters[filter_type] = filter_val ? `OwnershipOfLand='${filter_val}'` : '';
+              break;
+            case 'HealthStatus':
+              activeFilters[filter_type] = filter_val ? `HealthCondition='${filter_val}'` : '';
+              break;
+            case 'EconomicImp':
+              activeFilters[filter_type] = filter_val ? `EconomicImp='${filter_val}'` : '';
+              break;
+            case 'TreeAttributes':
+              activeFilters[filter_type] = filter_val ? `TreeAttributesJson='${filter_val}'` : '';
+              break;
+            case 'IUCN_Status':
+              activeFilters[filter_type] = filter_val ? `IUCN_Status='${filter_val}'` : '';
+              break;
+            case 'AdditionalParameters':
+              activeFilters[filter_type] = filter_val ? `OwnershipOfLand='${filter_val}'` : '';
+              break;
+          }
+        }
+        // activeCQLFilter = filters.length > 0 ? filters.join(" AND ") : null;
+        filters = Object.values(activeFilters).filter(f => f); // Remove empty
+        activeCQLFilter = filters.length ? filters.join(" AND ") : null;
+    };
+    
+
+    // ✅ Base Layers
+    const googleSatellite = new ol.layer.Tile({
+      source: new ol.source.XYZ({
+        url: 'http://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+        tilePixelRatio: 2,
+        attributions: '© Google Maps',
+      }),
+      visible: false,
+      title: 'Satellite'
+    });
+
+    const googleStreet = new ol.layer.Tile({
+      source: new ol.source.XYZ({
+        url: 'http://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+        tilePixelRatio: 2,
+        attributions: '© Google Maps',
+      }),
+      visible: false,
+      title: 'Street'
+    });
+
+    const googleHybrid = new ol.layer.Tile({
+      source: new ol.source.XYZ({
+        url: 'http://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+        tilePixelRatio: 2,
+        attributions: '© Google Maps',
+      }),
+      visible: true,
+      title: 'Hybrid'
+    });
+
+    // ✅ Tree Layer with filter already applied
+    const treeLayer = new ol.layer.Tile({
+      source: new ol.source.TileWMS({
+        url: `${geoserverUrl}/${workSpaceName}/wms`,
+        params: {
+          'LAYERS': `${workSpaceName}:${layerName}`,
+          'TILED': true,
+          'FORMAT': 'image/png',
+          'TRANSPARENT': true,
+          'VERSION': '1.1.0',
+          'CQL_FILTER': activeCQLFilter,
+          'STYLES': stylesLayers
+        },
+        serverType: 'geoserver',
+        crossOrigin: 'anonymous',
+        transition: 0
+      }),
+      opacity: 1
+    });
+
+    const kmlLayer = new ol.layer.Vector({
+      source: new ol.source.Vector({
+        url: 'kml/AllWards.kml',
+        format: new ol.format.KML()
+      }),
+      style: new ol.style.Style({
+        stroke: new ol.style.Stroke({
+          color: '#ff0000',
+          width: 2
+        }),
+        fill: new ol.style.Fill({
+          color: 'rgba(255, 0, 0, 0.1)'
+        }),
+        image: new ol.style.Circle({
+          radius: 5,
+          fill: new ol.style.Fill({ color: 'red' }),
+          stroke: new ol.style.Stroke({ color: '#fff', width: 1 })
+        })
+      })
+    });
+
+    // ✅ Initialize map after filter is ready
+    const map = new ol.Map({
+      target: 'map',
+      layers: [googleSatellite, googleStreet, googleHybrid, kmlLayer, treeLayer],
+      view: new ol.View({
+        center: ol.proj.fromLonLat([centralLongs, centralLat]),
+        zoom: 12
+      })
+    });
+
+
+    window.addEventListener('DOMContentLoaded', function () {
+      loadCheckBoxData();
+    });
+
+    function loadCheckBoxData() {
+      const url = "https://www.ornettreecensus.com/treecensusapi/geoserver_dropdown_filters.php";
+      const payload = new URLSearchParams({
+        appName: "TreeCensus",
+        electionName: electionName
+      });
+
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: payload.toString()
+      })
+      .then(response => {
+        if (!response.ok) throw new Error(`Network error: ${response.status}`);
+        return response.json();
+      })
+      .then(data => {
+        filterData = data;
+
+        // After filter data is loaded, apply the filter if filter_type and filter_val are present
+        if (filter_type && filter_val) {
+          // Find the corresponding checkbox and check it
+          const checkbox = document.querySelector(`#container-${filter_type} input[type="checkbox"]`);
+          if (checkbox) {
+            checkbox.checked = true;
+            checkbox.dispatchEvent(new Event('change', { bubbles: true })); // Trigger change event
+          }
+
+          // Call onFilterApply to apply the filter based on filter_val
+          onFilterApply(filter_val, '', filter_type);
+        }
+      })
+      .catch(error => {
+        console.error('Error loading dropdowns:', error);
+      });
+    }
+
+    if (filter_type) {
+      const mainCheckbox = document.querySelector(`#container-${filter_type} input[type="checkbox"]`);
+      if (mainCheckbox) {
+        mainCheckbox.click(); // ✅ Triggers the nested checkbox generation
+
+        // Delay execution to allow for dynamic content generation (checkboxes) 
+        setTimeout(() => {
+          const nestedCheckboxes = document.querySelectorAll(`#box-${filter_type} input[type="checkbox"]`);
+          
+          nestedCheckboxes.forEach(cb => {
+            if (cb.value === filter_val) {
+              cb.checked = true; // Check the box
+              cb.dispatchEvent(new Event("change", { bubbles: true })); // Trigger the change event
+              console.log("Selected Filter:", cb.value);
+
+              // Example of map layer handling with OpenLayers
+              if (cb.checked) {
+                map.getLayers().forEach(layer => {
+                  if (layer.get('id') === filter_val) {
+                    layer.setVisible(true); // Show the layer based on checkbox
+                  }
+                });
+              } else {
+                map.getLayers().forEach(layer => {
+                  if (layer.get('id') === filter_val) {
+                    layer.setVisible(false); // Hide the layer
+                  }
+                });
+              }
+            }
+          });
+        }, 500); // Delay to ensure nested checkboxes are available
+      }
+    }
+
+
+    
+  function toggleNestedOptions(checkbox) {
+    const filterType = checkbox.value;
+    const container = document.getElementById(`container-${filterType}`);
+    onFilterApply('', '', filterType);
+
+    const checkboxes = document.querySelectorAll('#filter_typeCheckboxes input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+      if (cb !== checkbox) {
+        cb.checked = false;
+        const otherFilterType = cb.value;
+        const nestedDiv = document.getElementById(`nested-${otherFilterType}`);
+        if (nestedDiv) nestedDiv.remove(); // Remove nested content of other filters
+      }
+  });
+
+  if (checkbox.checked) {
+    let items = [];
+    let label = "";
+
+    switch (filterType) {
+      case "WardWise":
+      case "HeritageTrees":
+        items = filterData.WardMaster || [];
+        label = "Select Wards";
+        break;
+      case "OwnershipStatus":
+        items = filterData.LandOwnership || [];
+        label = "Ownership Status";
+        break;
+      case "HealthStatus":
+        items = filterData.HealthCondition || [];
+        label = "Health Status";
+        break;
+      case "EconomicImp":
+        items = filterData.EconomicImp || [];
+        label = "Economic Importance";
+        break;
+      case "AdditionalParameters":
+        items = filterData.AdditionalParamaters || [];
+        label = "Additional Parameters";
+        break;
+      case "TreeAttributes":
+        items = filterData.TreeAttributes || [];
+        label = "Tree Attributes";
+        break;
+      case "IUCN_Status":
+        items = filterData.IUCN_Status || [];
+        label = "IUCN Status";
+        break;
+    }
+
+    const nestedDiv = document.createElement('div');
+    nestedDiv.id = `nested-${filterType}`;
+    nestedDiv.className = 'nested-checkbox-group mt-0';
+    nestedDiv.innerHTML = `<div class="row" id="box-${filterType}"></div>`;
+    container.appendChild(nestedDiv);
+
+    // Populate checkboxes
+    switch (filterType) {
+      case "WardWise":
+      case "HeritageTrees":
+        populateCheckboxes(items, `box-${filterType}`, 'WardNameOrNum', 'WardNameOrNum');
+        break;
+      case "OwnershipStatus":
+      case "HealthStatus":
+      case "TreeAttributes":
+      case "AdditionalParameters":
+        populateCheckboxes(items, `box-${filterType}`, 'Dvalue', 'Dvalue');
+        break;
+      case "EconomicImp":
+        populateCheckboxes(items, `box-${filterType}`, 'EconomicImp', 'EconomicImp');
+        break;
+      case "IUCN_Status":
+        populateCheckboxes(items, `box-${filterType}`, 'IUCN_Status', 'IUCN_Status');
+        break;
+    }
+  } else {
+    const nestedDiv = document.getElementById(`nested-${filterType}`);
+    if (nestedDiv) nestedDiv.remove();
+    onFilterApply(null, null, filterType);
+  }
+}
+
+
+  function populateCheckboxes(items, containerId, valueKey, labelKey) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = ''; // Clear existing
+      const visibleCount = 5;
+      const totalCount = items.length;
+
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('checkbox-wrapper');
+
+      items.forEach((item, index) => {
+        const value = item[valueKey] || '';
+        const label = item[labelKey] || '';
+        const checkboxId = `${containerId}-checkbox-${index}`;
+
+        const div = document.createElement('div');
+        div.className = 'form-check mb-1';
+
+        // Hide those beyond visible count
+        if (index >= visibleCount) div.classList.add('extra-checkbox', 'd-none');
+
+        div.innerHTML = `
+          <input class="form-check-input" type="checkbox" id="${checkboxId}" value="${value}" onchange="onFilterApply('${checkboxId}', '${value}', '')">
+          <label class="form-check-label" for="${checkboxId}">${label}</label>
+        `;
+
+        wrapper.appendChild(div);
+      });
+
+      container.appendChild(wrapper);
+
+      // Add toggle link if needed
+      if (totalCount > visibleCount) {
+        const toggleLink = document.createElement('a');
+        toggleLink.href = 'javascript:void(0)';
+        toggleLink.className = 'toggle-view';
+        toggleLink.textContent = '+ View All';
+
+        toggleLink.addEventListener('click', () => {
+          const extras = wrapper.querySelectorAll('.extra-checkbox');
+          const isHidden = extras[0].classList.contains('d-none');
+
+          extras.forEach(el => el.classList.toggle('d-none'));
+          toggleLink.textContent = isHidden ? '- View Less' : '+ View All';
+        });
+
+        container.appendChild(toggleLink);
+      }
+    }
+
+
+    function onFilterApply(checkboxId = null, value = null, filterTypeValue = null) {
+      const filterType = filterTypeValue || (checkboxId ? checkboxId.split('-')[1] : null);
+      const checkbox = checkboxId ? document.getElementById(checkboxId) : null;
+
+      // ✅ Clear all previous filters before applying the new one
+      activeFilters = {};
+
+      // Uncheck all checkboxes except the one clicked (optional: for better UX)
+      // if (checkboxId) {
+      //   document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      //     if (cb.id !== checkboxId) cb.checked = false;
+      //   });
+      // }
+      // console.log(filterType);
+      // activeCQLFilter = "";
+      if (checkbox && !checkbox.checked) {
+        // console.log('data result',filterType);
+        delete activeFilters[filterType];
+      } 
+      // else if (!checkboxId && filterTypeValue) {
+      //   console.log('data result2',filterType);
+
+      //   // called from toggleNestedOptions() on uncheck
+      //   delete activeFilters[filterType];
+      // } 
+      else {
+        switch (filterType) {
+          case 'WardWise':
+            activeFilters[filterType] = value ? `WardNameOrNum='${value}'` : '';
+            break;
+          case 'HeritageTrees':
+            //  console.log(filterType);
+            // console.log('data result4',filterType);
+            activeFilters[filterType] = value
+              ? `IsHeritageTree='Yes' AND WardNameOrNum='${value}'`
+              : `IsHeritageTree='Yes'`;
+            break;
+          case 'OwnershipStatus':
+            activeFilters[filterType] = value ? `OwnershipOfLand='${value}'` : '';
+            break;
+          case 'HealthStatus':
+            activeFilters[filterType] = value ? `HealthCondition='${value}'` : '';
+            break;
+          case 'EconomicImp':
+            activeFilters[filterType] = value ? `EconomicImp='${value}'` : '';
+            break;
+          case 'TreeAttributes':
+            activeFilters[filterType] = value ? `TreeAttributesJson='${value}'` : '';
+            break;
+          case 'IUCN_Status':
+            activeFilters[filterType] = value ? `IUCN_Status='${value}'` : '';
+            break;
+          case 'AdditionalParameters':
+            activeFilters[filterType] = value ? `OwnershipOfLand='${value}'` : '';
+            break;
+        }
+      }
+
+      const filters = Object.values(activeFilters).filter(f => f); // Remove empty
+      const activeCQLFilter = filters.length ? filters.join(" AND ") : null;
+      const stylesLayers = activeFilters['HeritageTrees'] ? 'haritage_tree' : '';
+
+      console.log("Applied Filter:", activeCQLFilter);
+
+      // Apply to map layer
+      treeLayer.getSource().updateParams({
+        'CQL_FILTER': activeCQLFilter,
+        'STYLES': stylesLayers
+      });
+    }
+    
+    // // ✅ Set filter UI dropdowns and auto apply
+    // window.onload = function () {
+    //   if (filter_type) {
+    //     $('#filter_typeSelect').val(filter_type).trigger('change');
+    //   }
+
+    //   if (filter_type === 'OwnershipStatus') {
+    //     $('#LandOwnershipDropdown').val(filter_val);
+    //   } else if (filter_type === 'HealthStatus') {
+    //     $('#HealthDropdown').val(filter_val);
+    //   } else if (filter_type === 'TreeAttributes') {
+    //     $('#TreeAttributesDropdown').val(filter_val);
+    //   } else if (filter_type === 'IUCN_Status') {
+    //     $('#IUCNStatusDropdown').val(filter_val);
+    //   } else if (filter_type === 'EconomicImp') {
+    //     $('#EconomicImpDropdown').val(filter_val);
+    //   } else if (filter_type === 'AdditionalParameters') {
+    //     $('#AdditionalParamDropdown').val(filter_val);
+    //   } else if (filter_type === 'WardWise' || filter_type === 'HeritageTrees') {
+    //     $('#WardDropdown').val(filter_val);
+    //   }
+
+    //   if (filter_type || filter_val) {
+    //     setTimeout(() => {
+    //       onFilterApply();
+    //     }, 200);
+    //   }
+    // };
+
+    // // ✅ Filter Apply function
+    // function onFilterApply() {
+    //   let filters = [];
+    //   let stylesLayers = "";
+    //   const filter_type = document.getElementById('filter_typeSelect').value;
+
+    //   if (filter_type === 'OwnershipStatus') {
+    //     const val = document.getElementById('LandOwnershipDropdown').value.trim();
+    //     if (val) filters.push(`OwnershipOfLand='${val}'`);
+    //   } else if (filter_type === 'HealthStatus') {
+    //     const val = document.getElementById('HealthDropdown').value.trim();
+    //     if (val) filters.push(`HealthCondition='${val}'`);
+    //   } else if (filter_type === 'TreeAttributes') {
+    //     const val = document.getElementById('TreeAttributesDropdown').value.trim();
+    //     if (val) filters.push(`TreeAttributesJson='${val}'`);
+    //   } else if (filter_type === 'IUCN_Status') {
+    //     const val = document.getElementById('IUCNStatusDropdown').value.trim();
+    //     if (val) filters.push(`IUCN_Status='${val}'`);
+    //   } else if (filter_type === 'EconomicImp') {
+    //     const val = document.getElementById('EconomicImpDropdown').value.trim();
+    //     if (val) filters.push(`EconomicImp='${val}'`);
+    //   } else if (filter_type === 'AdditionalParameters') {
+    //     const val = document.getElementById('AdditionalParamDropdown').value.trim();
+    //     if (val) filters.push(`OwnershipOfLand='${val}'`);
+    //   } else if (filter_type === 'WardWise') {
+    //     const val = document.getElementById('WardDropdown').value.trim();
+    //     if (val) filters.push(`WardNameOrNum='${val}'`);
+    //   } else if (filter_type === 'HeritageTrees') {
+    //     const val = document.getElementById('WardDropdown').value.trim();
+    //     filters.push(`IsHeritageTree='Yes'`);
+    //     if (val) filters.push(`WardNameOrNum='${val}'`);
+    //     stylesLayers = "haritage_tree";
+    //   }
+
+    //   activeCQLFilter = filters.length > 0 ? filters.join(" AND ") : null;
+
+    //   console.log("🔍 Applying CQL Filter:", activeCQLFilter);
+    //   treeLayer.getSource().updateParams({
+    //     'CQL_FILTER': activeCQLFilter,
+    //     'STYLES': stylesLayers
+    //   });
+
+    //   // fetchFilteredTreeCount(activeCQLFilter); // Optional
+    // }
+
+
+    //   function getDropdowns() {
+    //     const selectedType = document.getElementById('filter_typeSelect').value;
+    //     const mapping = {
+    //       WardWise: 'WardDropdown',
+    //       HeritageTrees: 'WardDropdown',
+    //       OwnershipStatus: 'LandOwnershipDropdown',
+    //       HealthStatus: 'HealthDropdown',
+    //       TreeAttributes: 'TreeAttributesDropdown',
+    //       IUCN_Status: 'IUCNStatusDropdown',
+    //       EconomicImp: 'EconomicImpDropdown',
+    //       AdditionalParameters: 'AdditionalParamDropdown'
+    //     };
+
+    //     document.querySelectorAll('.filter-dropdown').forEach(div => div.style.display = 'none');
+
+    //     Object.values(mapping).forEach(id => {
+    //       const dropdown = document.getElementById(id);
+    //       if (dropdown) dropdown.selectedIndex = 0;
+    //     });
+
+    //     if (mapping[selectedType]) {
+    //       loadDropdowns(mapping[selectedType]);
+    //       const containerId = mapping[selectedType] + 'Container';
+    //       document.getElementById(containerId).style.display = 'block';
+    //     }
+    //     onFilterApply();
+    //   }
+
+    //   function loadDropdowns(typeToShow) {
+    //     const url = "http://103.14.97.236/treecensusapi/geoserver_dropdown_filters.php";
+    //     const payload = new URLSearchParams({
+    //       appName: "TreeCensus",
+    //       electionName: electionName
+    //     });
+
+    //     fetch(url, {
+    //       method: 'POST',
+    //       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    //       body: payload.toString()
+    //     })
+    //     .then(response => {
+    //       if (!response.ok) throw new Error(`Network error: ${response.status}`);
+    //       return response.json();
+    //     })
+    //     .then(data => {
+    //       if (typeToShow === 'LandOwnershipDropdown') {
+    //         populateDropdown(data.LandOwnership, 'LandOwnershipDropdown', 'Dvalue', 'Dvalue');
+    //       } else if (typeToShow === 'HealthDropdown') {
+    //         populateDropdown(data.HealthCondition, 'HealthDropdown', 'Dvalue', 'Dvalue');
+    //       } else if (typeToShow === 'TreeAttributesDropdown') {
+    //         populateDropdown(data.TreeAttributes, 'TreeAttributesDropdown', 'Dvalue', 'Dvalue');
+    //       } else if (typeToShow === 'IUCNStatusDropdown') {
+    //         populateDropdown(data.IUCN_Status, 'IUCNStatusDropdown', 'IUCN_Status', 'IUCN_Status');
+    //       } else if (typeToShow === 'EconomicImpDropdown') {
+    //         populateDropdown(data.EconomicImp, 'EconomicImpDropdown', 'EconomicImp', 'EconomicImp');
+    //       } else if (typeToShow === 'AdditionalParamDropdown') {
+    //         populateDropdown(data.AdditionalParamaters, 'AdditionalParamDropdown', 'DValue', 'DValue');
+    //       } else if (typeToShow === 'WardDropdown') {
+    //         populateDropdown(data.WardMaster, 'WardDropdown', 'WardNameOrNum', 'WardNameOrNum');
+    //       }
+    //     })
+    //     .catch(error => {
+    //       console.error('Error loading dropdowns:', error);
+    //     });
+    //     initializeSelect2();
+    //   }
+
+    //   function initializeSelect2() {
+    //     $('.form-select').select2({
+    //       placeholder: "Select an option",
+    //       allowClear: true
+    //     });
+    //   }
+
+    //   function populateDropdown(dataArray, selectId, valueKey, labelKey) {
+    //     const select = document.getElementById(selectId);
+    //     select.innerHTML = `<option value=" ">All</option>`;
+    //     const selectedVal = filter_val;
+
+    //     if (Array.isArray(dataArray)) {
+    //       dataArray.forEach(item => {
+    //         const option = document.createElement('option');
+    //         option.value = item[valueKey];
+    //         option.textContent = item[labelKey];
+
+    //         if (option.value === selectedVal) {
+    //           option.selected = true;
+    //         }
+    //         select.appendChild(option);
+    //       });
+    //     }
+
+    //     $('#' + selectId).select2({
+    //       placeholder: "Select an option",
+    //       allowClear: true
+    //     });
+    //   }
+
+      // const googleSatellite = new ol.layer.Tile({
+      //   source: new ol.source.XYZ({
+      //     // url: 'http://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',  // `s` = satellite
+      //     url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+      //     tilePixelRatio: 2, // High DPI support
+      //     attributions: '© Google Maps',
+      //   }),
+      // });
+
+      // 🟨 Indore Boundary Vector Layer
+      // const indoreLayer = new ol.layer.Tile({
+      //   source: new ol.source.TileWMS({
+      //     url: `${geoserverUrl}${workSpaceName}/wms`,
+      //     params: {
+      //       'LAYERS': `${layerName}`,
+      //       'TILED': true,
+      //       'FORMAT': 'image/png',
+      //       'TRANSPARENT': true,
+      //       'VERSION': '1.1.0'
+      //     },
+      //     serverType: 'geoserver',
+      //     transition: 0
+      //   }),
+      //   opacity: 0.4 // 🔍 Lower opacity for overlay effect
+      // });
+
+      // const treeLayer = new ol.layer.Tile({
+      //   source: new ol.source.TileWMS({
+      //     url: 'http://103.14.97.236:8006/geoserver/nmmctreecensus/wms',
+      //     params: {
+      //       'LAYERS': 'nmmctreecensus:nmmc_geojson',
+      //       'TILED': true,
+      //       'FORMAT': 'image/png',
+      //       'TRANSPARENT': true,
+      //       'VERSION': '1.1.0',
+      //       'CQL_FILTER': null  // Initially no filter
+      //     },
+      //     serverType: 'geoserver',
+      //     transition: 0
+      //   }),
+      //   opacity: 0.8
+      // });
+
+    // 🛰️ Base map layers
+    
+      // Add basemap switcher controls
+    const basemaps = {
+      'Satellite': googleSatellite,
+      'Street': googleStreet,
+      'Hybrid': googleHybrid
+    };
+
+    // Create basemap switcher control
+    function createBasemapSwitcher() {
+      const container = document.createElement('div');
+      container.className = 'map-controls';
+      
+      // Add fullscreen control
+      const fullscreenBtn = document.createElement('button');
+      fullscreenBtn.className = 'btn btn-sm btn-outline-secondary';
+      fullscreenBtn.title = 'Toggle fullscreen';
+      fullscreenBtn.innerHTML = '⛶';
+      fullscreenBtn.onclick = function() {
+        const mapDiv = document.getElementById('map');
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else {
+          mapDiv.requestFullscreen().catch(err => {
+            console.error(`Error attempting to enable fullscreen: ${err.message}`);
+          });
+        }
+      };
+      container.appendChild(fullscreenBtn);
+
+      // 🟢 Draw Polygon Button
+      const drawPolygonBtn = document.createElement('button');
+      drawPolygonBtn.className = 'btn btn-sm btn-outline-secondary';
+      drawPolygonBtn.title = 'Draw Polygon';
+      drawPolygonBtn.textContent = '✒️ Draw Polygon';
+      drawPolygonBtn.onclick = function () {
+        activatePolygonDraw(); // Make sure this function exists
+      };
+      container.appendChild(drawPolygonBtn);
+      
+      // Add basemap buttons
+      for (const key in basemaps) {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-sm btn-outline-secondary';
+        btn.textContent = key;
+        btn.onclick = function() {
+          for (const layerKey in basemaps) {
+            basemaps[layerKey].setVisible(layerKey === key);
+          }
+          // Update active button styling
+          const buttons = container.querySelectorAll('button');
+          buttons.forEach(b => {
+            if (b.textContent === key) {
+              b.classList.add('active-basemap');
+            } else {
+              b.classList.remove('active-basemap');
+            }
+          });
+        };
+        // if (key === 'Satellite') btn.classList.add('active-basemap');
+        if (key === 'Hybrid') btn.classList.add('active-basemap');
+        container.appendChild(btn);
+      }
+      return container;
+    }
+
+    // Add controls to map
+    map.addControl(new ol.control.Zoom());
+    map.addControl(new ol.control.ScaleLine());
+    map.getViewport().appendChild(createBasemapSwitcher());
+
+      // ✅ Get total tree count from WFS
+      // function fetchTotalTreeCount() {
+      //   const url = `${geoserverUrl}/${workSpaceName}/ows?service=WFS&version=1.1.0&request=GetFeature&typeName=${workSpaceName}:${layerName}&resultType=hits&_=${Date.now()}`;
+      //   fetch(url)
+      //     .then(response => response.text())
+      //     .then(xmlText => {
+      //       const parser = new DOMParser();
+      //       const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+      //       const count = xmlDoc.documentElement.getAttribute("numberOfFeatures");
+      //       document.getElementById('countLoding').textContent = ``;
+      //       document.getElementById('featureCount').textContent = ``;
+      //       document.getElementById('countLoding').textContent = `🌳 Total Trees: `;
+      //       document.getElementById('featureCount').textContent = `${count}`;
+      //       console.log(`🌳 Total Trees: ${count}`);
+      //     })
+      //     .catch(err => {
+      //       console.error("Error fetching tree count:", err);
+      //       document.getElementById('featureCount').textContent = "Error loading count!";
+      //     });
+      // }
+
+
+      // // ✅ Initial call
+      // fetchTotalTreeCount();
+
+      const popup = new ol.Overlay({
+        element: document.getElementById('popup'),
+        positioning: 'bottom-center',
+        stopEvent: true,
+        offset: [0, -20]
+      });
+      map.addOverlay(popup);
+      
+      let drawInteraction;
+      const drawSource = new ol.source.Vector({ wrapX: false });
+
+      const drawLayer = new ol.layer.Vector({
+        source: drawSource,
+        style: new ol.style.Style({
+          fill: new ol.style.Fill({ color: 'rgba(0, 128, 0, 0.3)' }),
+          stroke: new ol.style.Stroke({ color: '#2e7d32', width: 2 })
+        })
+      });
+      map.addLayer(drawLayer);
+
+      function activatePolygonDraw() {
+        isRestrictClickPerTreeSelect = true;
+        if (drawInteraction) {
+          map.removeInteraction(drawInteraction);
+        }
+
+        drawInteraction = new ol.interaction.Draw({
+          source: drawSource,
+          type: 'Polygon'
+        });
+
+        map.addInteraction(drawInteraction);
+
+        drawInteraction.on('drawend', function (event) {
+        const polygon = event.feature.getGeometry();
+        
+        // Convert to EPSG:4326 before WKT
+        const formatWKT = new ol.format.WKT();
+        const transformedPolygon = polygon.clone().transform('EPSG:3857', 'EPSG:4326');
+        const wktPolygon = formatWKT.writeGeometry(transformedPolygon);
+        // console.log("Drawn WKT Polygon:", wktPolygon);
+        // getTreesInsidePolygon(wktPolygon);
+        getTreesInsidePolygon(wktPolygon, activeCQLFilter);
+        map.removeInteraction(drawInteraction);
+      });
+
+      }
+
+      function getTreesInsidePolygon(wktPolygon, cqlFilter = null) {
+        let finalFilter = `INTERSECTS(geom,${wktPolygon})`;
+
+        if (cqlFilter) {
+          finalFilter += ` AND ${cqlFilter}`;
+        }
+
+        const url = `${geoserverUrl}/${workSpaceName}/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=${workSpaceName}:${layerName}&outputFormat=application/json&CQL_FILTER=${encodeURIComponent(finalFilter)}`;
+
+        fetch(url)
+          .then((response) => response.json())
+          .then((data) => {
+            showTreeDataInModal(data);
+            isRestrictClickPerTreeSelect = false;
+            drawSource.clear();
+          })
+          .catch((error) => {
+            console.error('❌ Error fetching tree data:', error);
+          });
+      }
+
+      // function getTreesInsidePolygon(wktPolygon) {
+      //   const url = `${geoserverUrl}${workSpaceName}/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=${layerName}&outputFormat=application/json&CQL_FILTER=INTERSECTS(geom,${wktPolygon})`;
+
+      //   fetch(url)
+      //     .then((response) => response.json())
+      //     .then((data) => {
+      //       showTreeDataInModal(data);
+      //        isRestrictClickPerTreeSelect = false;
+      //         drawSource.clear();
+      //     })
+      //     .catch((error) => {
+      //       console.error('Error fetching tree data:', error);
+      //     });
+      // }
+
+      function showTreeDataInModal(data) {
+        let html = '';
+        const LocalNameCountMap = {};
+
+        if (data.features && data.features.length > 0) {
+          let countData = data.features.length;
+          document.getElementById("totalTreeFromPolygone").innerText = `(🌳 Trees: ${countData})`;
+
+          // Count each species
+          data.features.forEach((feature) => {
+            const LocalName = feature.properties.LocalName || 'Unknown';
+            LocalNameCountMap[LocalName] = (LocalNameCountMap[LocalName] || 0) + 1;
+          });
+
+          // Table header
+          html += `
+            <h5 class="text-success">🌿 Species Summary</h5>
+            <table class="table table-bordered table-striped" id="speciesTable">
+              <thead class="table-success">
+                <tr>
+                  <th>Sr. No.</th>
+                  <th>Local Name</th>
+                  <th>Count</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+
+          // Table rows
+          let sr = 1;
+          for (const [LocalName, count] of Object.entries(LocalNameCountMap)) {
+            html += `
+              <tr>
+                <td>${sr++}</td>
+                <td>${LocalName}</td>
+                <td>${count}</td>
+              </tr>
+            `;
+          }
+
+          html += `
+              </tbody>
+            </table>
+          `;
+        } else {
+          html = "<p>No trees found in this area.</p>";
+          document.getElementById("totalTreeFromPolygone").innerText = '';
+        }
+
+        // Inject into modal and show
+        document.getElementById("treeModalBody").innerHTML = html;
+        new bootstrap.Modal(document.getElementById("treeModal")).show();
+        // Initialize DataTable
+        setTimeout(() => {
+          $('#speciesTable').DataTable({
+            pageLength: 5,
+            lengthChange: false,
+            searching: true,
+            ordering: false
+          });
+        }, 300);
+      }
+
+      function clearDrawings() {
+        isRestrictClickPerTreeSelect = false;
+        drawSource.clear();
+      }
+
+    // Create popup element if not already present
+      const popupElement = document.createElement("div");
+      popupElement.id = "popup";
+      popupElement.style.position = "absolute";
+      popupElement.style.background = "white";
+      popupElement.style.padding = "10px";
+      popupElement.style.border = "1px solid #ccc";
+      popupElement.style.borderRadius = "8px";
+      popupElement.style.overflow = "scroll";
+      popupElement.style.zIndex = 1000;
+      popupElement.style.display = "none";
+      popupElement.style.boxShadow = "0 2px 10px rgba(0,0,0,0.3)";
+      popupElement.style.width = "631px";
+      popupElement.style.height = "420px";
+      document.body.appendChild(popupElement);
+
+      // Show popup at screen position
+      function showPopup(coordinate, content) {
+        const pixel = map.getPixelFromCoordinate(coordinate);
+        popupElement.innerHTML = `
+          <div style="text-align:right;">
+            <button onclick="hidePopup()" style="background:#transparent; color:white; border:none; border-radius:3px; padding:2px 5px; cursor:pointer;">❌</button>
+          </div>
+          ${content}
+        `;
+        // popupElement.style.left = `${pixel[0] + 10}px`;
+        // popupElement.style.top = `${pixel[1] + 10}px`;
+        popupElement.style.left = `32%`;
+        popupElement.style.top = `20%`;
+        popupElement.style.display = "block";
+      }
+
+      function hidePopup() {
+        popupElement.style.display = "none";
+      }
+  
+      
+      map.on('singleclick', function (evt) {
+          if(!isRestrictClickPerTreeSelect){
+            const viewResolution = map.getView().getResolution();
+            const url = treeLayer.getSource().getFeatureInfoUrl(
+              evt.coordinate,
+              viewResolution,
+              'EPSG:3857',
+              {
+                'INFO_FORMAT': 'application/json',
+                'FEATURE_COUNT': 50
+              }
+            );
+    
+            if (url) {
+              fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                  if (data.features.length > 0) {
+                    let html = `
+                      <h3 style="margin-bottom: 10px;">🌲 ${data.features.length} Tree(s):</h3>
+                      <ul style="list-style: none; padding: 0; margin: 0;">
+                    `;
+    
+                    data.features.forEach((feature, idx) => {
+                      const props = feature.properties;
+                      const fixLattitude = parseFloat(props.Lattitude);
+                      const fixLongitude = parseFloat(props.Longitude);
+                      html += `
+                        <li style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">
+                          <div class="row">
+                            <div class="col-2">
+                                <img src="${props.TreePhoto}" alt="Tree Image" style="width: 108%; height: 113px; border-radius: 4px;">
+                            </div>
+                            <div class="col-10">
+                              <div class="row">
+                                <div class="col-4">
+                                  <p class="treeInfo"> <span style="color: #198754;">Tree Census Cd:</span> ${props.TreeCensusCd}</p>
+                                </div>
+                                <div class="col-4">
+                                  <p class="treeInfo"> <span style="color: #198754;">Local Name:</span> ${props.LocalName}</p>
+                                </div>
+                                <div class="col-8">
+                                  <p class="treeInfo"> <span style="color: #198754;">Tree UID:</span> ${props.Tree_UID}</p>
+                                </div>
+                                <div class="col-4">
+                                  <p class="treeInfo"> <span style="color: #198754;">Age:</span> ${props.AgeGroup}</p>
+                                </div>
+                                <div class="col-4">
+                                  <p class="treeInfo"> <span style="color: #198754;">Height:</span> ${props.Height}</p>
+                                </div>
+                                <div class="col-4">
+                                  <p class="treeInfo"> <span style="color: #198754;">Girth:</span> ${props.Girth}</p>
+                                </div>
+                                <div class="col-4">
+                                  <p class="treeInfo"> <span style="color: #198754;">Canopy:</span> ${props.Canopy}</p>
+                                </div>
+                                <div class="col-4">
+                                  <p class="treeInfo"> <span style="color: #198754;">Lattitude:</span> ${fixLattitude.toFixed(6)}</p>
+                                </div>
+                                <div class="col-4">
+                                  <p class="treeInfo"> <span style="color: #198754;">Longitude:</span> ${fixLongitude.toFixed(6)}</p>
+                                </div>
+                                <div class="col-12">
+                                  <p class="treeInfo"> <span style="color: #198754;">Survey Date:</span> ${props.AddedDate} - ${props.AddedBy}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      `;
+                    });
+    
+                    html += "</ul>";
+    
+    
+                    showPopup(evt.coordinate, html);
+                  } else {
+                    hidePopup(); // 👈 Hide popup if no trees found
+                  }
+                })
+                .catch(err => {
+                  console.error("Feature info error:", err);
+                  hidePopup(); // 👈 Hide popup on error too
+                });
+            } else {
+              hidePopup();
+            }
+          }
+      });
+
+      
+      // <-- filter tree count  -->
+    // function fetchFilteredTreeCount(cqlFilter) {
+    //   const baseUrl = `${geoserverUrl}/${workSpaceName}/ows?service=WFS&version=1.1.0&request=GetFeature&typeName=${workSpaceName}:${layerName}&resultType=hits`;
+    //   const url = cqlFilter ? `${baseUrl}&CQL_FILTER=${encodeURIComponent(cqlFilter)}` : baseUrl;
+
+    //   fetch(url)
+    //     .then(response => response.text())
+    //     .then(xmlText => {
+    //       const parser = new DOMParser();
+    //       const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+    //       const count = xmlDoc.documentElement.getAttribute("numberOfFeatures");
+    //       // document.getElementById('featureFilterCount').textContent = ``;
+    //       document.getElementById('featureFilterCount').textContent = `${count} / `;
+    //     })
+    //     .catch(err => {
+    //       console.error("Error fetching filtered count:", err);
+    //       document.getElementById('featureCount').textContent = "Error loading count!";
+    //     });
+    // }
+    
+      
+    </script>
+    <!-- <script type="module" defer src="main.js"></script> -->
+</body>
+</html>

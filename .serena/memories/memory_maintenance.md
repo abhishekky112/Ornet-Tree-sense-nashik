@@ -1,0 +1,1 @@
+Keep project memories concise, durable, and focused on non-obvious project facts. Update existing memories rather than duplicating facts; use references with mem: when linking related memories.

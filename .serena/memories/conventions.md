@@ -1,0 +1,1 @@
+Use modular React components under nashik-map/src, keep GeoServer access in services/geoserver, map layer creation under map/layers, and filter CQL logic under features/filters. Prefer targeted Serena edits; preserve the legacy map_openlayer app.

@@ -1,0 +1,1 @@
+ORN​​ET project root is D:\abhishek_project\ornet. map_openlayer is the legacy reference app and must remain untouched. nashik-map is the active Vite + React + OpenLayers app for Nashik Tree Census.

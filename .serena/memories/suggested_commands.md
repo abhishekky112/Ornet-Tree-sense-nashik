@@ -1,0 +1,1 @@
+On Windows, run npm commands from D:\abhishek_project\ornet\nashik-map. Production validation: npm run build. Development server: npm run dev.

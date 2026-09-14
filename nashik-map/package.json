@@ -1,0 +1,23 @@
+{
+  "name": "nashik-tree-census-map",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lucide-react": "^1.46.0",
+    "ol": "^10.5.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^5.0.2",
+    "tailwindcss": "^4.3.3",
+    "vite": "^7.1.3"
+  }
+}
