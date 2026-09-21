@@ -7,6 +7,7 @@ import { createTreeLayer } from './layers/treeLayer';
 import { createKmlLayer } from './layers/kmlLayer';
 import { createNearbyAreaLayer } from './layers/nearbyAreaLayer';
 import { createNearbyTreeLayer } from './layers/nearbyTreeLayer';
+import { createClusterLayer } from './visualizations/clusterLayer';
 
 export function createMap(target) {
   const base = createBaseLayer();
@@ -14,10 +15,11 @@ export function createMap(target) {
   const kml = createKmlLayer();
   const nearbyArea = createNearbyAreaLayer();
   const nearbyTrees = createNearbyTreeLayer();
+  const clusters = createClusterLayer();
   const map = new Map({
     target,
-    layers: [base, kml, trees, nearbyArea, nearbyTrees],
+    layers: [base, kml, trees, nearbyArea, nearbyTrees, clusters],
     view: new View({ center: fromLonLat(NASHIK_CONFIG.center), zoom: NASHIK_CONFIG.zoom }),
   });
-  return { map, layers: { base, kml, trees, nearbyArea, nearbyTrees } };
+  return { map, layers: { base, kml, trees, nearbyArea, nearbyTrees, clusters } };
 }

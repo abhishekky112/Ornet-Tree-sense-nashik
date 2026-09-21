@@ -3,6 +3,33 @@ import { AlertCircle, Camera, CircleX, ExternalLink, FileSearch, LocateFixed, Ma
 
 const get = (p, ...keys) => keys.map((key) => p?.[key]).find((value) => value !== undefined && value !== null && String(value).trim() !== '') ?? '—';
 
+const AZURE_BLOB_BASE = 'https://treecensus.blob.core.windows.net/nashik/';
+
+export function resolveTreePhotoUrl(rawPhoto) {
+  if (!rawPhoto || rawPhoto === '—') return '';
+  const trimmed = String(rawPhoto).trim();
+  if (!trimmed) return '';
+
+  if (trimmed.startsWith('https://treecensus.blob.core.windows.net/')) {
+    return trimmed;
+  }
+
+  const legacyMatch = trimmed.match(/^https?:\/\/103\.14\.97\.\d+\/treecensusapi\/uploads\/(.*)$/i);
+  if (legacyMatch) {
+    return `${AZURE_BLOB_BASE}${legacyMatch[1]}`;
+  }
+
+  if (trimmed.startsWith('NASHIK/') || trimmed.startsWith('tree/')) {
+    return `${AZURE_BLOB_BASE}${trimmed}`;
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `${AZURE_BLOB_BASE}${trimmed}`;
+}
+
 function formatDate(value) {
   if (!value || value === '—') return '—';
   const date = new Date(value);
@@ -17,6 +44,7 @@ function TreeField({ label, value }) {
 }
 
 function TreeCard({ feature, distance, active, onSelect, onViewPhoto }) {
+  const [imgError, setImgError] = useState(false);
   const p = feature.properties || {};
   const uid = get(p, 'Tree_UID', 'TreeUID', 'TreeUid');
   const name = get(p, 'LocalName', 'HindiName');
@@ -31,14 +59,14 @@ function TreeCard({ feature, distance, active, onSelect, onViewPhoto }) {
   const executiveCode = get(p, 'Executive_Cd');
   const surveyBy = executiveCode === '—' || executiveCode === '0' || executiveCode === 0 ? 'User-2209' : `User-${executiveCode}`;
   const photo = get(p, 'TreePhoto', 'TreePhotoURL', 'Photo');
-  const photoUrl = photo !== '—' ? `https://ornettreecensus.com/treecensusapi/image-proxy.php?url=${encodeURIComponent(photo)}` : '';
+  const photoUrl = resolveTreePhotoUrl(photo);
 
   return <article className={`overflow-hidden rounded-xl border bg-white shadow-sm ${active ? 'border-emerald-500 ring-1 ring-emerald-500/20' : 'border-slate-200'}`}>
     <div role="button" tabIndex={0} className="w-full cursor-pointer text-left" onClick={() => onSelect(feature)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onSelect(feature); }}>
       <div className="flex gap-3 p-3.5">
         <div className="group relative h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-          {photoUrl ? <>
-            <img className="h-full w-full object-cover" src={photoUrl} alt={`${name} tree`} loading="lazy" />
+          {photoUrl && !imgError ? <>
+            <img className="h-full w-full object-cover" src={photoUrl} alt={`${name} tree`} loading="lazy" onError={() => setImgError(true)} />
             <button type="button" onClick={(event) => { event.stopPropagation(); onViewPhoto({ url: photoUrl, name, uid }); }} className="absolute inset-0 grid place-items-center bg-slate-950/45 text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100" aria-label={`View ${name} photo larger`}>
               <span className="flex items-center gap-1.5 rounded-md bg-white/95 px-2.5 py-1.5 text-[11px] font-semibold text-slate-800 shadow-sm"><Maximize2 size={14} /> View</span>
             </button>

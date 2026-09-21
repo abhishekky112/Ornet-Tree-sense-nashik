@@ -28,6 +28,7 @@ export default function App() {
   const [selectedTree, setSelectedTree] = useState(null);
   const [mapInstance, setMapInstance] = useState(null);
   const [basemap, setBasemap] = useState('street');
+  const [viewMode, setViewMode] = useState('normal');
 
   const selectedCount = useMemo(() => Object.values(filters).flat().length, [filters]);
 
@@ -85,7 +86,14 @@ export default function App() {
     <section className="workspace">
       <FilterPanel filters={filters} onChange={toggle} onClear={clear} />
       <div className="map-stage">
-        <MapView filters={filters} onMapClick={handleMapClick} onMapReady={setMapInstance} />
+        <MapView filters={filters} viewMode={viewMode} onMapClick={handleMapClick} onMapReady={setMapInstance} />
+        <div className="view-selector">
+          <span className="toolbar-label">View</span>
+          <select value={viewMode} onChange={(event) => setViewMode(event.target.value)} aria-label="Map visualization view">
+            <option value="normal">Normal</option>
+            <option value="cluster">Cluster</option>
+          </select>
+        </div>
         <div className="map-toolbar">
           <span className="toolbar-label">Basemap</span>
           {[
