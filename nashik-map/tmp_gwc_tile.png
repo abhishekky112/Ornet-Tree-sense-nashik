@@ -1,0 +1,8 @@
+<html>
+<head>
+<title>GWC Error</title>
+<link rel="stylesheet" href="../rest/web/gwc.css" type="text/css"/>
+</head>
+<body>
+<div id="pageHeader"><a id="logo" href="../"><img src="../rest/web/geowebcache_logo.png"/></a></div>
+<h4>400: Style 'nashikTreesHeatmap' is invalid.</h4></body></html>

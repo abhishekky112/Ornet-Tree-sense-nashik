@@ -10,13 +10,22 @@ export function createTreeWmsUrl() {
 }
 
 export function getTreeWmsSourceParams(cqlFilter = '') {
-  // GeoServer's INCLUDE filter explicitly matches every feature. Using it when
-  // no UI filters are selected prevents the previous Ward CQL from lingering
-  // in the TileWMS source and guarantees that deselecting the last filter
-  // restores all wards/trees.
   return {
     LAYERS: TREE_LAYER_NAME,
     STYLES: GEO_CONFIG.style,
     CQL_FILTER: cqlFilter || 'INCLUDE',
+  };
+}
+
+export function getHeatmapWmsSourceParams(cqlFilter = '') {
+  return {
+    LAYERS: TREE_LAYER_NAME,
+    STYLES: GEO_CONFIG.heatmapStyle,
+    FORMAT: 'image/png',
+    TRANSPARENT: true,
+    CQL_FILTER: cqlFilter || 'INCLUDE',
+    // Lower kernel radius and coarser computation grid reduce server work
+    // while keeping the same visual heat-density concept.
+    ENV: 'radius:25;pixelsPerCell:16',
   };
 }

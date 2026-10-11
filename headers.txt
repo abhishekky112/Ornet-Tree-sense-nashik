@@ -1,0 +1,7 @@
+HTTP/1.1 200 OK
+Server: Jetty(12.1.12)
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+Content-Security-Policy: base-uri 'self'; default-src 'none'; child-src 'self'; connect-src 'self'; font-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; form-action 'self'; frame-ancestors 'self';
+Content-Type: application/xml
+Transfer-Encoding: chunked

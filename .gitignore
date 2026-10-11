@@ -1,0 +1,7 @@
+.serena
+
+# Local secrets and environment overrides
+**/.env*
+!**/.env.example
+node_modules/
+dist/
